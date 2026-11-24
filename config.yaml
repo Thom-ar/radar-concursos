@@ -1,0 +1,57 @@
+# Configuração do Radar de Concursos
+# Edite à vontade e faça commit; o GitHub Actions usa este arquivo a cada execução.
+
+pci:
+  # Páginas de listagem do PCI Concursos (inscrições abertas)
+  paginas:
+    - url: https://www.pciconcursos.com.br/concursos/norte/
+      secao: Norte
+    - url: https://www.pciconcursos.com.br/concursos/nacional/
+      secao: Nacional
+  # UFs aceitas. "Nacional" representa os concursos da página nacional (sem UF).
+  ufs: [PA, AC, AM, AP, RO, RR, TO, Nacional]
+
+area:
+  # true  = só notifica concursos que batem com alguma palavra-chave
+  # false = notifica tudo da região e só destaca os que batem
+  exigir_palavra_chave: true
+  # Quando o cargo vem genérico ("Vários Cargos"), abre a notícia para procurar
+  # as palavras-chave no texto completo. Fica em cache no estado.
+  verificar_pagina_detalhe: true
+  max_paginas_detalhe_por_execucao: 40
+  palavras_chave:
+    - TI
+    - tecnologia da informação
+    - informática
+    - analista de sistemas
+    - desenvolvimento de sistemas
+    - desenvolvedor
+    - programador
+    - ciência da computação
+    - engenharia de computação
+    - engenheiro de computação
+    - engenharia de software
+    - ciência de dados
+    - banco de dados
+    - segurança da informação
+    - redes de computadores
+    - suporte técnico
+    - engenheiro
+    - engenharia
+
+lembretes:
+  # Avisa quando faltar este número de dias (ou menos) para encerrar as inscrições
+  dias_antes_do_fim: 3
+
+noticias:
+  # Radar de concursos "previstos/autorizados" via Google News (RSS).
+  ativo: true
+  max_dias: 3          # ignora notícias mais antigas que isso
+  max_por_execucao: 10
+  consultas:
+    - concurso previsto Pará
+    - concurso autorizado Pará
+    - concurso Belém edital
+    - concurso autorizado tecnologia da informação
+    - concurso federal autorizado analista TI
+    - concurso edital engenheiro de computação
