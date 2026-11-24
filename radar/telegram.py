@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import json
 import os
 import time
 
@@ -21,41 +22,85 @@ class Telegram:
         if not dry_run and not (self.token and self.chat_id):
             raise SystemExit("Defina TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID (ou use --dry-run).")
 
-    def _api(self, metodo: str, **dados):
-        r = requests.post(f"https://api.telegram.org/bot{self.token}/{metodo}", data=dados, timeout=30)
+    @property
+    def chats_autorizados(self) -> set[str]:
+        """TELEGRAM_CHAT_ID aceita vários ids separados por vírgula."""
+        return {c.strip() for c in self.chat_id.split(",") if c.strip()}
+
+    def _api(self, metodo: str, timeout: int = 30, **dados):
+        r = requests.post(
+            f"https://api.telegram.org/bot{self.token}/{metodo}", data=dados, timeout=timeout
+        )
         if r.status_code == 429:  # flood control
             espera = r.json().get("parameters", {}).get("retry_after", 5)
             time.sleep(espera + 1)
-            return self._api(metodo, **dados)
+            return self._api(metodo, timeout=timeout, **dados)
         r.raise_for_status()
         return r.json()
 
-    def enviar(self, texto: str) -> None:
+    def atualizacoes(self, offset: int | None = None, espera: int = 0) -> list[dict]:
+        """getUpdates. Chamar com offset = último update_id + 1 confirma os anteriores."""
+        dados = {"timeout": espera, "allowed_updates": '["message"]'}
+        if offset is not None:
+            dados["offset"] = offset
+        return self._api("getUpdates", timeout=espera + 15, **dados).get("result", [])
+
+    def digitando(self, chat_id: str) -> None:
+        if self.dry_run:
+            return
+        try:
+            self._api("sendChatAction", chat_id=chat_id, action="typing")
+        except requests.RequestException:
+            pass
+
+    def registrar_comandos(self, comandos: list[tuple[str, str]]) -> None:
+        """Mostra os comandos no menu "/" do Telegram."""
+        if self.dry_run:
+            return
+        lista = [{"command": c, "description": d} for c, d in comandos]
+        self._api("setMyCommands", commands=json.dumps(lista, ensure_ascii=False))
+
+    def enviar(self, texto: str, chat_id: str | None = None) -> None:
+        destinos = [chat_id] if chat_id else sorted(self.chats_autorizados)
         for parte in dividir(texto):
             if self.dry_run:
                 print("─" * 60 + "\n" + parte)
                 continue
-            self._api(
-                "sendMessage",
-                chat_id=self.chat_id,
-                text=parte,
-                parse_mode="HTML",
-                disable_web_page_preview="true",
-            )
-            time.sleep(1.1)  # evita limite de ~1 msg/s por chat
+            for destino in destinos:
+                self._api(
+                    "sendMessage",
+                    chat_id=destino,
+                    text=parte,
+                    parse_mode="HTML",
+                    disable_web_page_preview="true",
+                )
+                time.sleep(1.1)  # evita limite de ~1 msg/s por chat
 
 
 def dividir(texto: str, limite: int = LIMITE) -> list[str]:
-    """Quebra em blocos (separados por linha em branco) sem passar do limite."""
+    """Quebra em blocos (separados por linha em branco) sem passar do limite.
+
+    Um bloco que sozinho passa do limite é quebrado por linha, para não cortar
+    uma tag HTML ao meio (o Telegram rejeitaria a mensagem).
+    """
     partes, atual = [], ""
-    for bloco in texto.split("\n\n"):
-        candidato = f"{atual}\n\n{bloco}" if atual else bloco
+
+    def acrescentar(trecho: str, sep: str) -> None:
+        nonlocal atual
+        candidato = f"{atual}{sep}{trecho}" if atual else trecho
         if len(candidato) <= limite:
             atual = candidato
+            return
+        if atual:
+            partes.append(atual)
+        atual = trecho[:limite]
+
+    for bloco in texto.split("\n\n"):
+        if len(bloco) <= limite:
+            acrescentar(bloco, "\n\n")
         else:
-            if atual:
-                partes.append(atual)
-            atual = bloco[:limite]
+            for i, linha in enumerate(bloco.split("\n")):
+                acrescentar(linha, "\n\n" if i == 0 else "\n")
     if atual:
         partes.append(atual)
     return partes

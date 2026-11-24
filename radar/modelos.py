@@ -29,3 +29,21 @@ class Noticia:
     fonte: str
     publicada: date | None
     consulta: str
+
+
+@dataclass
+class Edital:
+    """Edital/concurso vindo de uma fonte oficial (DOU ou site da banca)."""
+    id: str          # link oficial
+    titulo: str
+    orgao: str
+    fonte: str       # "DOU", "CETAP", "Cesgranrio"...
+    situacao: str = ""            # "edital de abertura", "inscrições abertas", "em andamento"
+    publicado: date | None = None
+    resumo: str = ""              # texto (trecho ou integral), usado em filtros
+    descricao: str = ""           # ementa curta, ex. "ABERTURA DE CONCURSO PARA ANALISTA"
+    palavras_encontradas: list[str] = field(default_factory=list)
+
+    @property
+    def texto_busca(self) -> str:
+        return f"{self.orgao}\n{self.titulo}\n{self.resumo}"

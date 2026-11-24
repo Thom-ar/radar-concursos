@@ -1,0 +1,40 @@
+name: Comandos do Telegram
+
+# Responde os comandos (/editais, /ajuda) que chegaram desde a última execução.
+# O agendamento do GitHub pode atrasar alguns minutos; para resposta imediata,
+# rode `python -m radar --bot` num PC/servidor e desative este workflow
+# (os dois ao mesmo tempo disputam as mensagens do bot).
+
+on:
+  schedule:
+    # A cada 30 min. Em repositório privado isso consome ~1.500 dos 2.000 min/mês
+    # gratuitos; em repositório público é ilimitado e dá para usar */10.
+    - cron: "7,37 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: comandos
+  cancel-in-progress: false
+
+jobs:
+  responder:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Responder comandos pendentes
+        run: python -m radar --responder
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

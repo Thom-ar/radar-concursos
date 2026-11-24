@@ -55,3 +55,32 @@ noticias:
     - concurso autorizado tecnologia da informação
     - concurso federal autorizado analista TI
     - concurso edital engenheiro de computação
+
+oficiais:
+  # Fontes oficiais consultadas pelo comando /editais no Telegram.
+  max_por_fonte: 25      # itens por fonte na resposta (o resto: use /editais <termo>)
+  dou:
+    # Diário Oficial da União, Seção 3 (editais de concursos federais, autarquias,
+    # universidades, institutos federais e conselhos profissionais).
+    ativo: true
+    dias: 7              # olha os editais publicados nos últimos N dias
+    secao: do3
+    consultas:
+      - '"edital de abertura"'
+  # Sites das bancas. `padrao_link` é um regex aplicado ao endereço dos links da
+  # página; cada link que casa vira um item (o texto do link é o título).
+  paginas:
+    - nome: CETAP
+      situacao: inscrições abertas
+      url: https://www.cetapnet.com.br/index/abertos/
+      padrao_link: /informacoes/\d+
+    - nome: Cesgranrio
+      situacao: em andamento
+      url: https://www.cesgranrio.org.br/concursos?id=index-205112&ucat=25
+      padrao_link: cesgranrio\.org\.br/concurso/[^/]+/?$
+    # A FGV lista como "em andamento" concursos antigos também; ative se quiser.
+    - nome: FGV Conhecimento
+      ativo: false
+      situacao: em andamento
+      url: https://conhecimento.fgv.br/concursos
+      padrao_link: conhecimento\.fgv\.br/(concursos?/[^/#?]+|cpnu\w*)$
